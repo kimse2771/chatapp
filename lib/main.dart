@@ -1,7 +1,9 @@
+import 'package:chatapp/screens/chat_screen.dart';
 import 'package:chatapp/screens/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized(); // 플러터 코어엔진 초기화 Firebase.initializeApp 실행시 필요
@@ -23,7 +25,16 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.cyan
 
       ),
-      home: LoginSignupScreen(),
+      home: StreamBuilder(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder:(context, snapshot){
+          if(snapshot.hasData){
+            return ChatScreen();
+          }
+          return LoginSignupScreen();
+
+        },
+      ),
     );
   }
 }
