@@ -452,11 +452,11 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                                   email: userEmail,
                                   password: userPassword
                               );
+
                               await FirebaseFirestore.instance.collection('user').doc(newUser.user!.uid)
                               .set({
                                 'userName' :userName,
                                 'email' : userEmail,
-
                               });
 
                               if (newUser.user != null) {

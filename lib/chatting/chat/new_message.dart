@@ -10,21 +10,25 @@ class NewMessage extends StatefulWidget {
 }
 
 class _NewMessageState extends State<NewMessage> {
-  final _controller = TextEditingController();
+  final _controller = TextEditingController(); //input 필드에서 글자 사라짐
 
   var _userEnterMessage = "";
-  void _sendMessage(){
+
+  void _sendMessage() async {
     FocusScope.of(context).unfocus();
     final user = FirebaseAuth.instance.currentUser;
+    final userData = await FirebaseFirestore.instance
+        .collection('user')
+        .doc(user!.uid)
+        .get();
     FirebaseFirestore.instance.collection('chat').add({
-      'text' : _userEnterMessage,
-      'time' : Timestamp.now(),
-      'userID' : user!.uid,
+      'text': _userEnterMessage,
+      'time': Timestamp.now(),
+      'userID': user!.uid,
+      'userName': userData.data()!['userName']
     });
     _controller.clear();
-
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -37,10 +41,8 @@ class _NewMessageState extends State<NewMessage> {
             child: TextField(
               maxLines: null,
               controller: _controller,
-              decoration: InputDecoration(
-                labelText: 'Send a message...'
-              ),
-              onChanged: (value){
+              decoration: InputDecoration(labelText: 'Send a message...'),
+              onChanged: (value) {
                 setState(() {
                   _userEnterMessage = value;
                 });
@@ -48,9 +50,9 @@ class _NewMessageState extends State<NewMessage> {
             ),
           ),
           IconButton(
-              onPressed: _userEnterMessage.trim().isEmpty ? null:_sendMessage,
-              icon: Icon(Icons.send),
-              color: Colors.blue,
+            onPressed: _userEnterMessage.trim().isEmpty ? null : _sendMessage,
+            icon: Icon(Icons.send),
+            color: Colors.blue,
           ),
         ],
       ),
