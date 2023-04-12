@@ -1,9 +1,15 @@
+import 'dart:io';
+
+import 'package:chatapp/add_image/add_image.dart';
 import 'package:chatapp/comfig/palette.dart';
 import 'package:chatapp/screens/chat_screen.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:modal_progress_hud_nsn/modal_progress_hud_nsn.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
 
 
 class LoginSignupScreen extends StatefulWidget {
@@ -23,6 +29,12 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
   String userName ='';
   String userEmail ='';
   String userPassword ='';
+  File? userPickedImage;
+
+  void pickedImage(File image){
+    userPickedImage=image;
+
+  }
 
   void _tryValidation(){
    final isValid = _formKey.currentState!.validate();
@@ -37,27 +49,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
         builder: (context){
           return Dialog(
             backgroundColor: Colors.white,
-            child: Container(
-              padding: EdgeInsets.only(top: 10),
-              width: 150,
-              height: 300,
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 40,
-                    backgroundColor: Colors.blue,
-                  ),
-                  SizedBox(height: 10,),
-                  OutlinedButton.icon(
-                    onPressed:(){} ,
-                    icon: Icon(Icons.image),
-                    label: Text('Add icon'),
-                  ),
-
-                ],
-              ),
-
-            ),
+            child:AddImage(pickedImage),
 
           );
 
@@ -206,6 +198,7 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                                         SizedBox(
                                           width: 15,
                                         ),
+                                        if(isSignupScreen)
                                         GestureDetector(
                                           onTap: (){
                                             showAlert(context);
@@ -491,6 +484,21 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                             showSpinner=true;
                           });
                           if (isSignupScreen) {
+                            if(userPickedImage == null){
+                              setState(() {
+                                showSpinner = false;
+                              });
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                  Text('Please pick yout image'),
+                                  backgroundColor: Colors.blue,
+                                ),
+                              );
+
+                              return;
+                            }
                             _tryValidation();
                             try {
                               final newUser = await _authentication
@@ -499,33 +507,51 @@ class _LoginSignupScreenState extends State<LoginSignupScreen> {
                                   password: userPassword
                               );
 
-                              await FirebaseFirestore.instance.collection('user').doc(newUser.user!.uid)
-                              .set({
-                                'userName' :userName,
-                                'email' : userEmail,
-                              });
+                              final refImage = FirebaseStorage.instance.ref().child('picked_image')
+                              .child(newUser.user!.uid + '.png');
+
+
+                              await refImage.putFile(userPickedImage!);
+                              final url = await refImage.getDownloadURL();
+                              await FirebaseFirestore.instance
+                                  .collection('user')
+                                  .doc(newUser.user!.uid)
+                                  .set(
+                                {
+                                  'userName': userName,
+                                  'email': userEmail,
+                                 'picked_image' : url
+                                },
+                              );
 
                               if (newUser.user != null) {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) {
-                                    return ChatScreen();
-                                  },
+                                  MaterialPageRoute(
+                                    builder: (context) {
+                                      return ChatScreen();
+                                    },
                                   ),
                                 );
                                 setState(() {
-                                  showSpinner=false;
+                                  showSpinner = false;
                                 });
                               }
                             } catch (e) {
                               print(e);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content:
-                                  Text('Please check yout email and password'),
-                                  backgroundColor: Colors.blue,
-                                ),
-                              );
+                              if(mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content:
+                                    Text(
+                                        'Please check yout email and password'),
+                                    backgroundColor: Colors.blue,
+                                  ),
+                                );
+                                setState(() {
+                                  showSpinner = false;
+                                });
+                              }
                             }
                           }
 
